@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: ${BC_DB_URL:jdbc:postgresql://localhost:5432/bikecare}
+    username: ${BC_DB_USER:bikecare}
+    password: ${BC_DB_PASS:bikecare}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+
+server:
+  port: 8080
+
+jwt:
+  secret: ${BC_JWT_SECRET:change-me-please}
+  issuer: bikecare
+  ttlMinutes: 1440
