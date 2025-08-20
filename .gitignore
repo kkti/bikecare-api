@@ -1,16 +1,25 @@
-# Compiled class file
+# --- OS ---
+.DS_Store
+
+# --- IDE ---
+.idea/
+*.iml
+
+# --- Gradle ---
+.gradle/
+**/build/
+out/
+
+# --- Java/Kotlin artefakty ---
 *.class
+.kotlin/
 
-# Log file
+# --- Logy & crash dumpy ---
 *.log
+hs_err_pid*
+replay_pid*
 
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
+# --- Balené archivy (necommitujeme buildy) ---
 *.jar
 *.war
 *.nar
@@ -19,9 +28,12 @@
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
+# --- Lokální konfigurace mimo repo (varianta B) ---
+/config/
 
-# Kotlin Gradle plugin data, see https://kotlinlang.org/docs/whatsnew20.html#new-directory-for-kotlin-data-in-gradle-projects
-.kotlin/
+# --- Env soubory ---
+.env
+.env.local
+
+# --- Volitelné: lokální docker override ---
+docker-compose.override.yml
