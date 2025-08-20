@@ -9,40 +9,64 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.core.userdetails.User
+import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
+import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.web.cors.CorsConfigurationSource
 
 @Configuration
 class SecurityConfig(
     private val jwtAuthFilter: JwtAuthFilter,
-    private val users: AppUserRepository
+    private val users: AppUserRepository,
+    private val corsConfigurationSource: CorsConfigurationSource
 ) {
-    @Bean fun userDetailsService(): UserDetailsService = UserDetailsService { username ->
-        val u = users.findByEmail(username).orElseThrow()
-        org.springframework.security.core.userdetails.User
-            .withUsername(u.email).password(u.password).authorities("ROLE_${u.role}").build()
+
+    @Bean
+    fun userDetailsService(): UserDetailsService = UserDetailsService { username ->
+        val u = users.findByEmail(username) ?: throw UsernameNotFoundException(username)
+        val role = (u.role ?: "USER").uppercase()
+        val authorities = listOf(SimpleGrantedAuthority("ROLE_$role"))
+        User(u.email, u.password, authorities)
     }
+
     @Bean fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
-    @Bean fun authenticationProvider(): AuthenticationProvider =
-        DaoAuthenticationProvider().apply {
-            setUserDetailsService(userDetailsService())
-            setPasswordEncoder(passwordEncoder())
-        }
-    @Bean fun authenticationManager(cfg: AuthenticationConfiguration): AuthenticationManager = cfg.authenticationManager
+
+    @Bean
+    fun authenticationProvider(): AuthenticationProvider {
+        val provider = DaoAuthenticationProvider()
+        provider.setUserDetailsService(userDetailsService())
+        provider.setPasswordEncoder(passwordEncoder())
+        return provider
+    }
+
+    @Bean
+    fun authenticationManager(config: AuthenticationConfiguration): AuthenticationManager =
+        config.authenticationManager
 
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
-        http.csrf { it.disable() }
+        http
+            .csrf { it.disable() }
+            .cors { it.configurationSource(corsConfigurationSource) }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
-                it.requestMatchers("/api/auth/**", "/actuator/health").permitAll()
+                it.requestMatchers(
+                    "/api/auth/**",
+                    "/actuator/health",
+                    "/swagger-ui/**",
+                    "/v3/api-docs/**"
+                ).permitAll()
                 it.anyRequest().authenticated()
             }
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter::class.java)
+
         return http.build()
     }
 }

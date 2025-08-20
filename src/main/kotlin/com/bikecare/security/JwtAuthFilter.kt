@@ -5,37 +5,46 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.core.userdetails.User
-import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 
 @Component
 class JwtAuthFilter(
-    private val jwt: JwtService,
+    private val jwtService: JwtService,
     private val users: AppUserRepository
 ) : OncePerRequestFilter() {
 
-    override fun doFilterInternal(req: HttpServletRequest, res: HttpServletResponse, chain: FilterChain) {
-        val header = req.getHeader("Authorization")
-        if (header?.startsWith("Bearer ") == true && SecurityContextHolder.getContext().authentication == null) {
-            val token = header.substring(7)
-            runCatching {
-                val email = jwt.extractEmail(token)
-                val user = users.findByEmail(email).orElse(null)
-                if (user != null) {
-                    val details: UserDetails = User.withUsername(user.email)
-                        .password(user.password)
-                        .authorities("ROLE_${user.role}")
-                        .build()
-                    val auth = UsernamePasswordAuthenticationToken(details, null, details.authorities)
-                    auth.details = WebAuthenticationDetailsSource().buildDetails(req)
-                    SecurityContextHolder.getContext().authentication = auth
-                }
+    override fun doFilterInternal(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        filterChain: FilterChain
+    ) {
+        val authHeader = request.getHeader("Authorization")
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response)
+            return
+        }
+
+        val token = authHeader.substringAfter("Bearer ").trim()
+        val username = try {
+            jwtService.extractUsername(token)
+        } catch (_: Exception) {
+            null
+        }
+
+        if (username != null && SecurityContextHolder.getContext().authentication == null) {
+            val user = users.findByEmail(username)
+            if (user != null && jwtService.isTokenValid(token, user.email)) {
+                val authorities = listOf(SimpleGrantedAuthority("ROLE_${(user.role ?: "USER").uppercase()}"))
+                val authToken = UsernamePasswordAuthenticationToken(user.email, null, authorities)
+                authToken.details = WebAuthenticationDetailsSource().buildDetails(request)
+                SecurityContextHolder.getContext().authentication = authToken
             }
         }
-        chain.doFilter(req, res)
+
+        filterChain.doFilter(request, response)
     }
 }

@@ -1,15 +1,26 @@
-# src/test/resources/application.yml
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/bikecare
-    username: bikecare
-    password: bikecare
+    url: jdbc:h2:mem:bikecare;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: false
+
+server:
+  port: 0
 
 jwt:
-  # vlastní pevný testovací klíč – ať testy neřeší env ani lokální soubor
-  secret: 74111c60cc14ab63d75c7ce8c6aee34ec21f1f012f1388acef999df84c5f8a8f
-  issuer: bikecare
+  secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+  issuer: test
   ttlMinutes: 60
+
+logging:
+  level:
+    org.springframework: WARN

@@ -20,18 +20,25 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 
+    // Kotlin reflexe je nutná pro Spring s Kotlinem (PreferredConstructor apod.)
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+
     implementation("org.flywaydb:flyway-core")
-    implementation("org.flywaydb:flyway-database-postgresql:11.7.2") // ← důležité pro PG 15
+    implementation("org.postgresql:postgresql:42.7.4")
 
-    implementation("org.postgresql:postgresql")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    // JWT – stabilní API s parserBuilder (viz JwtService)
+    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
 
-    // JWT
-    implementation("io.jsonwebtoken:jjwt-api:0.12.5")
-    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.5")
-    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.5")
+    // OpenAPI + Swagger UI
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+
+    // Actuator
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("com.h2database:h2:2.2.224") // in-memory DB pro testy
 }
 
 tasks.withType<Test> { useJUnitPlatform() }
@@ -39,4 +46,3 @@ tasks.withType<Test> { useJUnitPlatform() }
 springBoot {
     mainClass.set("com.bikecare.BikeCareApplicationKt")
 }
-// ci: trigger Wed Aug 20 18:10:27 EEST 2025

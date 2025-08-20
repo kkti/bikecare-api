@@ -1,10 +1,13 @@
 package com.bikecare.bikecomponent
 
 import org.springframework.data.jpa.repository.JpaRepository
-import java.util.Optional
+import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
 
 interface BikeComponentRepository : JpaRepository<BikeComponent, Long> {
-    fun findAllByBike_IdAndRemovedAtIsNull(bikeId: Long): List<BikeComponent>
-    fun findAllByBike_Id(bikeId: Long): List<BikeComponent>
-    fun findByIdAndBike_Id(id: Long, bikeId: Long): Optional<BikeComponent>
+
+    fun findAllByBikeId(bikeId: Long): List<BikeComponent>
+
+    @Query("select bc from BikeComponent bc where bc.bike.id = :bikeId and bc.removedAt is null")
+    fun findAllActiveByBikeId(@Param("bikeId") bikeId: Long): List<BikeComponent>
 }

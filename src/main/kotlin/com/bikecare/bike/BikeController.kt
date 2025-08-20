@@ -1,12 +1,15 @@
 package com.bikecare.bike
 
 import com.bikecare.user.AppUserRepository
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.web.bind.annotation.*
 
 data class BikeDto(
     val id: Long?,
+    @field:NotBlank(message = "name is required")
     val name: String,
     val brand: String?,
     val model: String?,
@@ -21,16 +24,16 @@ class BikeController(
 ) {
     @GetMapping
     fun list(@AuthenticationPrincipal principal: UserDetails): List<BikeDto> {
-        val userId = users.findByEmail(principal.username).orElseThrow().id!!
-        return bikes.findAllByOwner_Id(userId).map { it.toDto() }
+        val user = users.findByEmail(principal.username) ?: throw NoSuchElementException()
+        return bikes.findAllByOwner(user).map { it.toDto() }
     }
 
     @PostMapping
     fun create(
         @AuthenticationPrincipal principal: UserDetails,
-        @RequestBody body: BikeDto
+        @Valid @RequestBody body: BikeDto
     ): BikeDto {
-        val user = users.findByEmail(principal.username).orElseThrow()
+        val user = users.findByEmail(principal.username) ?: throw NoSuchElementException()
         val saved = bikes.save(Bike(owner = user, name = body.name, brand = body.brand, model = body.model, type = body.type))
         return saved.toDto()
     }
