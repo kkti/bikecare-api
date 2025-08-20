@@ -1,18 +1,37 @@
+# src/main/resources/application.yml
 spring:
+  config:
+    # načti (pokud existuje) soubor mimo repo:
+    import: optional:file:./config/application-local.yml
   datasource:
+    # fallbacky přes env – v produkci se dají přepsat
     url: ${BC_DB_URL:jdbc:postgresql://localhost:5432/bikecare}
     username: ${BC_DB_USER:bikecare}
     password: ${BC_DB_PASS:bikecare}
+    hikari:
+      maximum-pool-size: 5
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
   flyway:
     enabled: true
+    locations: classpath:db/migration
 
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 jwt:
-  secret: ${BC_JWT_SECRET:change-me-please}
+  # produkce může přepsat env proměnnou; lokál bere z application-local.yml
+  secret: ${BC_JWT_SECRET:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
   issuer: bikecare
   ttlMinutes: 1440
+
+logging:
+  level:
+    org.springframework.security: INFO
+    org.hibernate.SQL: INFO
