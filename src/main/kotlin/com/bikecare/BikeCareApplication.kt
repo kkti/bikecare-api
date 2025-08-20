@@ -1,11 +1,11 @@
-package com.bikecare.bikecare_api
+package com.bikecare
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
 @SpringBootApplication
-class BikecareApiApplication
+class BikeCareApplication
 
 fun main(args: Array<String>) {
-	runApplication<BikecareApiApplication>(*args)
+    runApplication<BikeCareApplication>(*args)
 }
