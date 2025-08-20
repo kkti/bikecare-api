@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.core.userdetails.User
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
@@ -29,17 +30,20 @@ class JwtAuthFilter(
         }
 
         val token = authHeader.substringAfter("Bearer ").trim()
-        val username = try {
-            jwtService.extractUsername(token)
-        } catch (_: Exception) {
-            null
+        if (token.isEmpty()) {
+            filterChain.doFilter(request, response)
+            return
         }
+
+        val username = try { jwtService.extractUsername(token) } catch (_: Exception) { null }
 
         if (username != null && SecurityContextHolder.getContext().authentication == null) {
             val user = users.findByEmail(username)
             if (user != null && jwtService.isTokenValid(token, user.email)) {
                 val authorities = listOf(SimpleGrantedAuthority("ROLE_${(user.role ?: "USER").uppercase()}"))
-                val authToken = UsernamePasswordAuthenticationToken(user.email, null, authorities)
+                // nastavíme principal jako UserDetails (ne String), aby fungovalo @AuthenticationPrincipal UserDetails
+                val principal = User(user.email, user.password, authorities)
+                val authToken = UsernamePasswordAuthenticationToken(principal, null, authorities)
                 authToken.details = WebAuthenticationDetailsSource().buildDetails(request)
                 SecurityContextHolder.getContext().authentication = authToken
             }

@@ -53,6 +53,13 @@ class GlobalExceptionHandler {
     fun handleAccessDenied(ex: AccessDeniedException, req: HttpServletRequest) =
         build(HttpStatus.FORBIDDEN, "Access denied", req)
 
+    @ExceptionHandler(IllegalArgumentException::class)
+    fun handleIllegalArg(ex: IllegalArgumentException, req: HttpServletRequest): ResponseEntity<ApiError> {
+        val status = if (ex.message == "Forbidden") HttpStatus.FORBIDDEN else HttpStatus.BAD_REQUEST
+        val msg = if (ex.message == "Forbidden") "Access denied" else ex.message ?: "Bad request"
+        return build(status, msg, req)
+    }
+
     @ExceptionHandler(NoSuchElementException::class)
     fun handleNotFound(ex: NoSuchElementException, req: HttpServletRequest) =
         build(HttpStatus.NOT_FOUND, "Not found", req)
@@ -67,11 +74,15 @@ class GlobalExceptionHandler {
         req: HttpServletRequest,
         errors: List<ApiFieldError> = emptyList()
     ): ResponseEntity<ApiError> {
+        // Použij explicitní metody (Jakarta Servlet API)
+        val path = runCatching { req.getRequestURI() }
+            .getOrElse { runCatching { req.getRequestURL().toString() }.getOrDefault("") }
+
         val body = ApiError(
             status = status.value(),
             error = status.reasonPhrase,
             message = message,
-            path = req.requestURI,
+            path = path,
             errors = errors
         )
         return ResponseEntity.status(status).body(body)

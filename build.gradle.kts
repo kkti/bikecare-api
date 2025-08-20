@@ -20,13 +20,16 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 
-    // Kotlin reflexe je nutná pro Spring s Kotlinem (PreferredConstructor apod.)
+    // Kotlin reflektce pro Spring + Kotlin
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
+    // Flyway + Postgres modul (nutné pro Flyway 10+)
     implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")
+
     implementation("org.postgresql:postgresql:42.7.4")
 
-    // JWT – stabilní API s parserBuilder (viz JwtService)
+    // JWT 0.11.5 (API s parserBuilder)
     implementation("io.jsonwebtoken:jjwt-api:0.11.5")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
