@@ -39,3 +39,4 @@ tasks.withType<Test> { useJUnitPlatform() }
 springBoot {
     mainClass.set("com.bikecare.BikeCareApplicationKt")
 }
+// ci: trigger Wed Aug 20 18:10:27 EEST 2025
