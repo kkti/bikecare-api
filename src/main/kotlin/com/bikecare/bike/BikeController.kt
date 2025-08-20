@@ -5,7 +5,13 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.web.bind.annotation.*
 
-data class BikeDto(val id: Long?, val name: String, val brand: String?, val model: String?, val type: String?)
+data class BikeDto(
+    val id: Long?,
+    val name: String,
+    val brand: String?,
+    val model: String?,
+    val type: String?
+)
 
 @RestController
 @RequestMapping("/api/bikes")
@@ -15,14 +21,19 @@ class BikeController(
 ) {
     @GetMapping
     fun list(@AuthenticationPrincipal principal: UserDetails): List<BikeDto> {
-        val u = users.findByEmail(principal.username).orElseThrow()
-        return bikes.findAllByOwnerId(u.id!!).map { BikeDto(it.id, it.name, it.brand, it.model, it.type) }
+        val userId = users.findByEmail(principal.username).orElseThrow().id!!
+        return bikes.findAllByOwner_Id(userId).map { it.toDto() }
     }
 
     @PostMapping
-    fun create(@AuthenticationPrincipal principal: UserDetails, @RequestBody body: BikeDto): BikeDto {
-        val u = users.findByEmail(principal.username).orElseThrow()
-        val saved = bikes.save(Bike(owner = u, name = body.name, brand = body.brand, model = body.model, type = body.type))
-        return BikeDto(saved.id, saved.name, saved.brand, saved.model, saved.type)
+    fun create(
+        @AuthenticationPrincipal principal: UserDetails,
+        @RequestBody body: BikeDto
+    ): BikeDto {
+        val user = users.findByEmail(principal.username).orElseThrow()
+        val saved = bikes.save(Bike(owner = user, name = body.name, brand = body.brand, model = body.model, type = body.type))
+        return saved.toDto()
     }
 }
+
+private fun Bike.toDto() = BikeDto(id = this.id, name = this.name, brand = this.brand, model = this.model, type = this.type)

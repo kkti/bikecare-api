@@ -3,13 +3,10 @@ package com.bikecare.bikecomponent
 import com.bikecare.bike.BikeRepository
 import com.bikecare.componenttype.ComponentTypeRepository
 import com.bikecare.user.AppUserRepository
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.core.userdetails.UserDetails
-import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.*
-import org.springframework.web.server.ResponseStatusException
 import java.math.BigDecimal
 import java.time.Instant
 
@@ -50,49 +47,39 @@ class BikeComponentController(
         @AuthenticationPrincipal principal: UserDetails,
         @RequestParam(defaultValue = "true") active: Boolean
     ): List<ComponentDto> {
-        val user = users.findByEmail(principal.username).orElseThrow()
-        val bike = bikes.findByIdAndOwnerId(bikeId, user.id!!)
-            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND) }
+        val userId = users.findByEmail(principal.username).orElseThrow().id!!
+        // 404 pokud kolo nepatří uživateli
+        bikes.findByIdAndOwner_Id(bikeId, userId).orElseThrow()
 
         val items = if (active)
-            comps.findAllByBikeIdAndRemovedAtIsNull(bike.id!!)
+            comps.findAllByBike_IdAndRemovedAtIsNull(bikeId)
         else
-            comps.findAllByBikeId(bike.id!!)
+            comps.findAllByBike_Id(bikeId)
 
         return items.map { it.toDto() }
     }
 
     @PostMapping
-    @Transactional
     fun install(
         @PathVariable bikeId: Long,
         @AuthenticationPrincipal principal: UserDetails,
         @RequestBody body: InstallComponentRequest
     ): ResponseEntity<ComponentDto> {
-        val user = users.findByEmail(principal.username).orElseThrow()
-        val bike = bikes.findByIdAndOwnerId(bikeId, user.id!!)
-            .orElseThrow { ResponseStatusException(HttpStatus.FORBIDDEN) }
+        val userId = users.findByEmail(principal.username).orElseThrow().id!!
+        val bike = bikes.findByIdAndOwner_Id(bikeId, userId).orElseThrow()
 
-        val type = types.findByKey(body.typeKey)
-            ?: return ResponseEntity.badRequest().build()
-
-        val pos = body.position?.uppercase()?.let {
-            when (it) {
-                "FRONT", "REAR", "LEFT", "RIGHT" -> it
-                else -> throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid position '$it'")
-            }
-        }
+        val type = types.findByKey(body.typeKey) ?: return ResponseEntity.badRequest().build()
 
         val saved = comps.save(
             BikeComponent(
                 bike = bike,
                 type = type,
                 label = body.label,
-                position = pos,
+                position = body.position,
                 installedAt = body.installedAt ?: Instant.now(),
-                installedOdometerKm = body.installedOdometerKm?.let(BigDecimal::valueOf),
-                lifespanOverride = body.lifespanOverride?.let(BigDecimal::valueOf),
-                price = body.price?.let(BigDecimal::valueOf),
+                installedOdometerKm = body.installedOdometerKm?.let { BigDecimal.valueOf(it) },
+                lifespanOverride = body.lifespanOverride?.let { BigDecimal.valueOf(it) },
+                price = body.price?.let { BigDecimal.valueOf(it) },
                 currency = body.currency,
                 shop = body.shop
             )
@@ -101,33 +88,29 @@ class BikeComponentController(
     }
 
     @PostMapping("/{componentId}/remove")
-    @Transactional
     fun remove(
         @PathVariable bikeId: Long,
         @PathVariable componentId: Long,
         @AuthenticationPrincipal principal: UserDetails
     ): ResponseEntity<Void> {
-        val user = users.findByEmail(principal.username).orElseThrow()
-        // najdeme kolo patřící userovi a zároveň komponentu patřící tomu kolu
-        bikes.findByIdAndOwnerId(bikeId, user.id!!)
-            .orElseThrow { ResponseStatusException(HttpStatus.FORBIDDEN) }
-
-        val bc = comps.findByIdAndBikeId(componentId, bikeId)
-            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND) }
+        val userId = users.findByEmail(principal.username).orElseThrow().id!!
+        // ověří vlastnictví kola + že komponenta patří danému kolu
+        bikes.findByIdAndOwner_Id(bikeId, userId).orElseThrow()
+        val bc = comps.findByIdAndBike_Id(componentId, bikeId).orElseThrow()
 
         bc.removedAt = Instant.now()
         comps.save(bc)
         return ResponseEntity.noContent().build()
     }
-
-    private fun BikeComponent.toDto() = ComponentDto(
-        id = this.id!!,
-        typeKey = this.type.key,
-        typeName = this.type.name,
-        label = this.label,
-        position = this.position,
-        installedAt = this.installedAt,
-        installedOdometerKm = this.installedOdometerKm?.toDouble(),
-        lifespanOverride = this.lifespanOverride?.toDouble()
-    )
 }
+
+private fun BikeComponent.toDto() = ComponentDto(
+    id = this.id!!,
+    typeKey = this.type.key,
+    typeName = this.type.name,
+    label = this.label,
+    position = this.position,
+    installedAt = this.installedAt,
+    installedOdometerKm = this.installedOdometerKm?.toDouble(),
+    lifespanOverride = this.lifespanOverride?.toDouble()
+)
