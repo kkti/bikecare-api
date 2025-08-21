@@ -25,9 +25,11 @@ class BikeComponent(
 
     var label: String? = null,
 
-    @JdbcTypeCode(SqlTypes.OTHER)
+    // DŮLEŽITÉ: mapuj na PG enum přes pojmenovaný enum typ
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM) // Hibernate 6+: pošle PGobject s názvem typu
     @Column(name = "position", columnDefinition = "component_pos")
-    var position: String? = null,
+    var position: ComponentPos? = null,
 
     @Column(name = "installed_at", nullable = false)
     var installedAt: Instant = Instant.now(),
