@@ -2,6 +2,7 @@ package com.bikecare.common
 
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.ConstraintViolationException
+import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -22,8 +23,11 @@ data class ApiError(
     val errors: List<ApiFieldError> = emptyList()
 )
 
-@RestControllerAdvice
+/** Pozor: advice je omezeno jen na naše balíčky com.bikecare.* – aby nechytalo výjimky springdocu. */
+@RestControllerAdvice(basePackages = ["com.bikecare"])
 class GlobalExceptionHandler {
+
+    private val log = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidation(ex: MethodArgumentNotValidException, req: HttpServletRequest): ResponseEntity<ApiError> {
@@ -65,8 +69,10 @@ class GlobalExceptionHandler {
         build(HttpStatus.NOT_FOUND, "Not found", req)
 
     @ExceptionHandler(Exception::class)
-    fun handleOther(ex: Exception, req: HttpServletRequest) =
-        build(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error", req)
+    fun handleOther(ex: Exception, req: HttpServletRequest): ResponseEntity<ApiError> {
+        log.error("Unhandled exception on path ${req.requestURI}", ex)
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error", req)
+    }
 
     private fun build(
         status: HttpStatus,
@@ -74,10 +80,7 @@ class GlobalExceptionHandler {
         req: HttpServletRequest,
         errors: List<ApiFieldError> = emptyList()
     ): ResponseEntity<ApiError> {
-        // Použij explicitní metody (Jakarta Servlet API)
-        val path = runCatching { req.getRequestURI() }
-            .getOrElse { runCatching { req.getRequestURL().toString() }.getOrDefault("") }
-
+        val path = runCatching { req.requestURI }.getOrDefault("")
         val body = ApiError(
             status = status.value(),
             error = status.reasonPhrase,

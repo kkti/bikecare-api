@@ -11,7 +11,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.User
-import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
@@ -39,7 +38,7 @@ class SecurityConfig(
 
     @Bean
     fun authenticationProvider(): AuthenticationProvider {
-        val provider = DaoAuthenticationProvider()
+        val provider = DaoAuthenticationProvider() // deprecated, funkční; refaktor později
         provider.setUserDetailsService(userDetailsService())
         provider.setPasswordEncoder(passwordEncoder())
         return provider
@@ -51,17 +50,15 @@ class SecurityConfig(
 
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
+        // Zabezpečení pouze pro /api/** a /actuator/health.
+        // Swagger cesty (/v3/api-docs/**, /swagger-ui/**, …) zůstávají mimo security (200 bez JWT).
         http
+            .securityMatcher("/api/**", "/actuator/health")
             .csrf { it.disable() }
             .cors { it.configurationSource(corsConfigurationSource) }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
-                it.requestMatchers(
-                    "/api/auth/**",
-                    "/actuator/health",
-                    "/swagger-ui/**",
-                    "/v3/api-docs/**"
-                ).permitAll()
+                it.requestMatchers("/api/auth/**", "/actuator/health").permitAll()
                 it.anyRequest().authenticated()
             }
             .authenticationProvider(authenticationProvider())

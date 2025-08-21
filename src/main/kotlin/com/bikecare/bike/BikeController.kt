@@ -1,6 +1,8 @@
 package com.bikecare.bike
 
 import com.bikecare.user.AppUserRepository
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import org.springframework.http.ResponseEntity
@@ -25,23 +27,22 @@ data class UpdateBikeRequest(
     val type: String?
 )
 
+@Tag(name = "Bikes")
 @RestController
 @RequestMapping("/api/bikes")
 class BikeController(
     private val bikes: BikeRepository,
     private val users: AppUserRepository
 ) {
-    /** List vlastních kol */
     @GetMapping
-    fun list(@AuthenticationPrincipal principal: UserDetails): List<BikeDto> {
+    fun list(@Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails): List<BikeDto> {
         val user = users.findByEmail(principal.username) ?: throw NoSuchElementException()
         return bikes.findAllByOwner(user).map { it.toDto() }
     }
 
-    /** Vytvoření kola */
     @PostMapping
     fun create(
-        @AuthenticationPrincipal principal: UserDetails,
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @Valid @RequestBody body: BikeDto
     ): BikeDto {
         val user = users.findByEmail(principal.username) ?: throw NoSuchElementException()
@@ -57,28 +58,24 @@ class BikeController(
         return saved.toDto()
     }
 
-    /** Detail kola (jen vlastníka) */
     @GetMapping("/{id}")
     fun detail(
-        @AuthenticationPrincipal principal: UserDetails,
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @PathVariable id: Long
     ): BikeDto {
         val user = users.findByEmail(principal.username) ?: throw NoSuchElementException()
-        val bike = bikes.findByIdAndOwnerId(id, user.id!!) // vlastnictví v dotazu
-            .orElseThrow { NoSuchElementException() }
+        val bike = bikes.findByIdAndOwnerId(id, user.id!!).orElseThrow { NoSuchElementException() }
         return bike.toDto()
     }
 
-    /** Úprava kola (full update) */
     @PutMapping("/{id}")
     fun update(
-        @AuthenticationPrincipal principal: UserDetails,
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @PathVariable id: Long,
         @Valid @RequestBody body: UpdateBikeRequest
     ): BikeDto {
         val user = users.findByEmail(principal.username) ?: throw NoSuchElementException()
-        val bike = bikes.findByIdAndOwnerId(id, user.id!!)
-            .orElseThrow { NoSuchElementException() }
+        val bike = bikes.findByIdAndOwnerId(id, user.id!!).orElseThrow { NoSuchElementException() }
 
         bike.name = body.name
         bike.brand = body.brand
@@ -89,17 +86,15 @@ class BikeController(
         return saved.toDto()
     }
 
-    /** Smazání kola (jen vlastníka) */
     @DeleteMapping("/{id}")
     fun delete(
-        @AuthenticationPrincipal principal: UserDetails,
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @PathVariable id: Long
     ): ResponseEntity<Void> {
         val user = users.findByEmail(principal.username) ?: throw NoSuchElementException()
-        val bike = bikes.findByIdAndOwnerId(id, user.id!!)
-            .orElseThrow { NoSuchElementException() }
+        val bike = bikes.findByIdAndOwnerId(id, user.id!!).orElseThrow { NoSuchElementException() }
 
-        bikes.delete(bike) // pokud v DB brání FK (komponenty), vrátí 409 přes GlobalExceptionHandler
+        bikes.delete(bike)
         return ResponseEntity.noContent().build()
     }
 }

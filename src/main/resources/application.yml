@@ -1,10 +1,7 @@
-# src/main/resources/application.yml
 spring:
   config:
-    # načti (pokud existuje) soubor mimo repo:
     import: optional:file:./config/application-local.yml
   datasource:
-    # fallbacky přes env – v produkci se dají přepsat
     url: ${BC_DB_URL:jdbc:postgresql://localhost:5432/bikecare}
     username: ${BC_DB_USER:bikecare}
     password: ${BC_DB_PASS:bikecare}
@@ -24,16 +21,30 @@ server:
   port: ${PORT:8080}
 
 jwt:
-  # produkce může přepsat env proměnnou; lokál bere z application-local.yml
   secret: ${BC_JWT_SECRET:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
   issuer: bikecare
   ttlMinutes: 1440
 
-# CORS pro FE vývoj (Vite: http://localhost:5173)
 cors:
   allowed-origins: ${BC_CORS_ORIGINS:http://localhost:5173}
+
+springdoc:
+  api-docs:
+    enabled: true
+    groups:
+      enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui/index.html
+    display-request-duration: true
+    urls:
+      - name: bikecare
+        url: /v3/api-docs/bikecare
+    urls-primary-name: bikecare
 
 logging:
   level:
     org.springframework.security: INFO
     org.hibernate.SQL: INFO
+    # uncomment for troubleshooting springdoc:
+    # org.springdoc: DEBUG

@@ -3,6 +3,8 @@ package com.bikecare.bikecomponent
 import com.bikecare.bike.BikeRepository
 import com.bikecare.componenttype.ComponentTypeRepository
 import com.bikecare.user.AppUserRepository
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
@@ -47,6 +49,7 @@ data class ComponentDto(
     val removedAt: Instant?
 )
 
+@Tag(name = "Components")
 @RestController
 @RequestMapping("/api/bikes/{bikeId}/components")
 class BikeComponentController(
@@ -58,7 +61,7 @@ class BikeComponentController(
 
     @GetMapping
     fun list(
-        @AuthenticationPrincipal principal: UserDetails,
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @PathVariable bikeId: Long,
         @RequestParam(required = false, defaultValue = "true") active: Boolean
     ): List<ComponentDto> {
@@ -72,7 +75,7 @@ class BikeComponentController(
 
     @PostMapping
     fun install(
-        @AuthenticationPrincipal principal: UserDetails,
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @PathVariable bikeId: Long,
         @Valid @RequestBody body: InstallComponentRequest
     ): ComponentDto {
@@ -101,7 +104,7 @@ class BikeComponentController(
 
     @PostMapping("/{componentId}/remove")
     fun remove(
-        @AuthenticationPrincipal principal: UserDetails,
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @PathVariable bikeId: Long,
         @PathVariable componentId: Long
     ): ResponseEntity<Void> {
