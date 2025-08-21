@@ -48,3 +48,12 @@ logging:
     org.hibernate.SQL: INFO
     # uncomment for troubleshooting springdoc:
     # org.springdoc: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,caches
+  endpoint:
+    health:
+      show-details: always

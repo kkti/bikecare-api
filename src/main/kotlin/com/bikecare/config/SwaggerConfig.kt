@@ -12,7 +12,6 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 class SwaggerConfig {
 
-    // Generujeme jen pro naše REST controllery
     @Bean
     fun bikecareApi(): GroupedOpenApi =
         GroupedOpenApi.builder()
@@ -20,19 +19,17 @@ class SwaggerConfig {
             .packagesToScan(
                 "com.bikecare.auth",
                 "com.bikecare.bike",
-                "com.bikecare.bikecomponent"
+                "com.bikecare.bikecomponent",
+                "com.bikecare.bikecomponent.history", // nově: historie
+                "com.bikecare.componenttype",
+                "com.bikecare.odometer"               // nově: odometer
             )
             .pathsToMatch("/api/**")
             .build()
 
-    // JWT Authorize tlačítko
     @Bean
     fun openAPI(): OpenAPI {
-        val bearer = SecurityScheme()
-            .type(SecurityScheme.Type.HTTP)
-            .scheme("bearer")
-            .bearerFormat("JWT")
-
+        val bearer = SecurityScheme().type(SecurityScheme.Type.HTTP).scheme("bearer").bearerFormat("JWT")
         return OpenAPI()
             .info(
                 Info()

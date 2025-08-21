@@ -1,0 +1,30 @@
+@host = http://localhost:8080
+@user = test@example.com
+@pass = Secret123!
+
+### (A) Register (pokud máš /api/auth/register)
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{user}}",
+  "password": "{{pass}}",
+  "fullName": "Test User"
+}
+
+### Login (získání JWT)
+# Pokud máš /api/auth/login:
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{user}}",
+  "password": "{{pass}}"
+}
+
+> {% client.global.set("jwt", response.body.token); %}
+
+### GET component types (s JWT)
+GET {{host}}/api/component-types
+Authorization: Bearer {{jwt}}
