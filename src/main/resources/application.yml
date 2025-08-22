@@ -1,29 +1,34 @@
 spring:
   config:
     import: optional:file:./config/application-local.yml
+
   datasource:
     url: ${BC_DB_URL:jdbc:postgresql://localhost:5432/bikecare}
     username: ${BC_DB_USER:bikecare}
     password: ${BC_DB_PASS:bikecare}
     hikari:
       maximum-pool-size: 5
+
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: validate
     properties:
       hibernate:
+        jdbc:
+          time_zone: UTC
         format_sql: true
+
   flyway:
     enabled: true
 
 server:
   port: ${PORT:8080}
 
-jwt:
-  secret: ${BC_JWT_SECRET:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
-  issuer: bikecare
-  ttlMinutes: 1440
+security:
+  jwt:
+    secret: ${BC_JWT_SECRET:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+    expiration: 86400000 # 24h
 
 cors:
   allowed-origins: ${BC_CORS_ORIGINS:http://localhost:5173}
@@ -46,8 +51,8 @@ logging:
   level:
     org.springframework.security: INFO
     org.hibernate.SQL: INFO
-    # uncomment for troubleshooting springdoc:
-    # org.springdoc: DEBUG
+    # org.hibernate.type.descriptor.sql.BasicBinder: TRACE  # odkomentuj pro bind parametry
+    # org.springdoc: DEBUG                                 # odkomentuj pro ladění springdocu
 
 management:
   endpoints:

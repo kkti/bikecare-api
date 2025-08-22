@@ -13,34 +13,34 @@ import org.springframework.web.filter.OncePerRequestFilter
 @Component
 class JwtAuthFilter(
     private val jwtService: JwtService,
-    private val userDetailsService: UserDetailsService,
+    private val userDetailsService: UserDetailsService
 ) : OncePerRequestFilter() {
 
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
-        filterChain: FilterChain
+        chain: FilterChain
     ) {
-        val authHeader = request.getHeader("Authorization")
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response)
-            return
+        val header = request.getHeader("Authorization")
+        if (header == null || !header.startsWith("Bearer ")) {
+            chain.doFilter(request, response); return
         }
 
-        val jwt = authHeader.substring(7)
-        val username = jwtService.extractUsername(jwt)
+        val token = header.substring(7)
+        val username = runCatching { jwtService.extractUsername(token) }.getOrNull()
 
-        if (SecurityContextHolder.getContext().authentication == null) {
+        if (username != null && SecurityContextHolder.getContext().authentication == null) {
             val userDetails = userDetailsService.loadUserByUsername(username)
-            if (jwtService.isTokenValid(jwt, username)) {
-                val authToken = UsernamePasswordAuthenticationToken(
+            if (jwtService.isTokenValid(token, userDetails)) {
+                val auth = UsernamePasswordAuthenticationToken(
                     userDetails, null, userDetails.authorities
-                )
-                authToken.details = WebAuthenticationDetailsSource().buildDetails(request)
-                SecurityContextHolder.getContext().authentication = authToken
+                ).also {
+                    it.details = WebAuthenticationDetailsSource().buildDetails(request)
+                }
+                SecurityContextHolder.getContext().authentication = auth
             }
         }
 
-        filterChain.doFilter(request, response)
+        chain.doFilter(request, response)
     }
 }

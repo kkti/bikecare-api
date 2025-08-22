@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: bikecare
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+# tiché logy ve spring-security během testů
+logging:
+  level:
+    org.springframework.security: WARN
+
+# JWT – pro testy musí existovat platný klíč
+security:
+  jwt:
+    # base64 (dekóduje se na 48+ bytů; bezpečné jen pro testy)
+    secret: "ZmFrZV9iYXNlNjRfand0X3NlY3JldF9rZXlfdGVzdF9vbmx5X2Zvcl9kZXY="
+    expiration: 3600000

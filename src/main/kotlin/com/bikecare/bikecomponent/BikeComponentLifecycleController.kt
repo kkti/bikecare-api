@@ -1,73 +1,87 @@
 package com.bikecare.bikecomponent
 
-import com.bikecare.bike.BikeRepository
 import com.bikecare.user.AppUserRepository
 import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
+import java.math.BigDecimal
+import java.time.Instant
 
-@Tag(name = "Components")
+@Tag(name = "Bike components lifecycle")
 @RestController
-@RequestMapping("/api/bikes/{bikeId}/components")
+@RequestMapping("/api/bikes/{bikeId}/components/{componentId}")
 class BikeComponentLifecycleController(
-    private val bikes: BikeRepository,
-    private val comps: BikeComponentRepository,
-    private val users: AppUserRepository
+    private val service: BikeComponentService,
+    private val users: AppUserRepository,
 ) {
 
-    @Operation(summary = "Restore a soft-removed component")
-    @PostMapping("/{componentId}/restore")
-    fun restore(
-        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
-        @PathVariable bikeId: Long,
-        @PathVariable componentId: Long
-    ): ResponseEntity<Void> {
-        val user = users.findByEmail(principal.username)
+    data class ChangeRequest(
+        val at: Instant? = null,
+        val odometerKm: BigDecimal? = null,
+    )
+
+    private fun ownerId(principal: UserDetails): Long =
+        users.findByEmail(principal.username)?.id
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "User not found")
 
-        // ověření vlastnictví kola
-        bikes.findByIdAndOwnerId(bikeId, user.id!!)
-            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Bike not found") }
-
-        val bc = comps.findByIdAndBikeId(componentId, bikeId)
-            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Component not found") }
-
-        if (bc.removedAt == null) {
-            throw ResponseStatusException(HttpStatus.CONFLICT, "Component is not removed")
-        }
-
-        bc.removedAt = null
-        comps.save(bc)
+    @Operation(summary = "Soft delete (mark component as removed)")
+    @DeleteMapping
+    fun softDelete(
+        @PathVariable bikeId: Long,
+        @PathVariable componentId: Long,
+        @AuthenticationPrincipal principal: UserDetails,
+        @RequestBody(required = false) body: ChangeRequest?
+    ): ResponseEntity<Void> {
+        val uid = ownerId(principal)
+        service.softDelete(
+            bikeId = bikeId,
+            componentId = componentId,
+            ownerId = uid,
+            at = body?.at ?: Instant.now(),
+            odometerKm = body?.odometerKm
+        )
         return ResponseEntity.noContent().build()
     }
 
-    @Operation(summary = "Hard-delete a component (requires it to be soft-removed first)")
-    @DeleteMapping("/{componentId}", params = ["hard=true"])
-    fun hardDelete(
-        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
+    @Operation(summary = "Restore (undo soft delete)")
+    @PostMapping("/restore")
+    fun restore(
         @PathVariable bikeId: Long,
-        @PathVariable componentId: Long
+        @PathVariable componentId: Long,
+        @AuthenticationPrincipal principal: UserDetails,
+        @RequestBody(required = false) body: ChangeRequest?
     ): ResponseEntity<Void> {
-        val user = users.findByEmail(principal.username)
-            ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "User not found")
+        val uid = ownerId(principal)
+        service.restore(
+            bikeId = bikeId,
+            componentId = componentId,
+            ownerId = uid,
+            at = body?.at ?: Instant.now()
+        )
+        return ResponseEntity.noContent().build()
+    }
 
-        bikes.findByIdAndOwnerId(bikeId, user.id!!)
-            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Bike not found") }
-
-        val bc = comps.findByIdAndBikeId(componentId, bikeId)
-            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Component not found") }
-
-        if (bc.removedAt == null) {
-            throw ResponseStatusException(HttpStatus.CONFLICT, "Component must be soft-removed first")
-        }
-
-        comps.delete(bc)
+    @Operation(summary = "Hard delete (delete component and its history)")
+    @DeleteMapping("/hard")
+    fun hardDelete(
+        @PathVariable bikeId: Long,
+        @PathVariable componentId: Long,
+        @AuthenticationPrincipal principal: UserDetails,
+        @RequestBody(required = false) body: ChangeRequest?
+    ): ResponseEntity<Void> {
+        val uid = ownerId(principal)
+        service.hardDelete(
+            bikeId = bikeId,
+            componentId = componentId,
+            ownerId = uid,
+            at = body?.at ?: Instant.now()
+        )
         return ResponseEntity.noContent().build()
     }
 }
