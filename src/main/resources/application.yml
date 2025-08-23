@@ -62,3 +62,8 @@ management:
   endpoint:
     health:
       show-details: always
+
+# Strava OAuth
+strava:
+  client-id: ${STRAVA_CLIENT_ID:}
+  redirect-uri: ${STRAVA_REDIRECT_URI:http://localhost:8080/api/strava/oauth/callback}
