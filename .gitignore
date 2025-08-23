@@ -37,3 +37,4 @@ replay_pid*
 
 # --- Volitelné: lokální docker override ---
 docker-compose.override.yml
+patch/
