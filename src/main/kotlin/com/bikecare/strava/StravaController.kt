@@ -14,7 +14,8 @@ import org.springframework.web.util.UriComponentsBuilder
 @RequestMapping("/api/strava")
 class StravaController(
     @Value("\${strava.client-id:}") private val clientId: String,
-    @Value("\${strava.redirect-uri:}") private val redirectUri: String
+    @Value("\${strava.redirect-uri:}") private val redirectUri: String,
+    private val strava: StravaService
 ) {
 
     @GetMapping("/oauth/url")
@@ -40,10 +41,8 @@ class StravaController(
     fun oauthCallback(
         @RequestParam code: String,
         @RequestParam(required = false) scope: String?
-    ): ResponseEntity<String> {
-        // Skeleton – výměnu code -> token doplníme v další iteraci
-        return ResponseEntity
-            .status(HttpStatus.NOT_IMPLEMENTED)
-            .body("Received code=$code (scope=$scope) – token exchange not implemented yet")
+    ): ResponseEntity<StravaTokenResponse> {
+        val tokens = strava.exchangeCode(code)
+        return ResponseEntity.ok(tokens)
     }
 }
