@@ -4,6 +4,7 @@ import com.bikecare.bike.BikeRepository
 import com.bikecare.user.AppUserRepository
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
+import io.swagger.v3.oas.annotations.Parameter
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.PositiveOrZero
@@ -43,7 +44,7 @@ class OdometerController(
     @PutMapping
     fun upsert(
         @PathVariable bikeId: Long,
-        @AuthenticationPrincipal principal: UserDetails,
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @Valid @RequestBody body: UpsertRequest
     ): ResponseEntity<OdometerEntry> {
         val user = users.findByEmail(principal.username)
@@ -72,7 +73,7 @@ class OdometerController(
     @GetMapping("/current")
     fun current(
         @PathVariable bikeId: Long,
-        @AuthenticationPrincipal principal: UserDetails
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails
     ): ResponseEntity<Map<String, Any>> {
         val user = users.findByEmail(principal.username)
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "User not found")
@@ -92,7 +93,7 @@ class OdometerController(
     @DeleteMapping
     fun deleteByDate(
         @PathVariable bikeId: Long,
-        @AuthenticationPrincipal principal: UserDetails,
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) date: LocalDate
     ): ResponseEntity<Void> {
         val user = users.findByEmail(principal.username)

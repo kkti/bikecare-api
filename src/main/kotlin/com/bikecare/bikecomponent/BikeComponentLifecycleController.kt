@@ -3,6 +3,7 @@ package com.bikecare.bikecomponent
 import com.bikecare.user.AppUserRepository
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
+import io.swagger.v3.oas.annotations.Parameter
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -35,7 +36,7 @@ class BikeComponentLifecycleController(
     fun softDelete(
         @PathVariable bikeId: Long,
         @PathVariable componentId: Long,
-        @AuthenticationPrincipal principal: UserDetails,
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @RequestBody(required = false) body: ChangeRequest?
     ): ResponseEntity<Void> {
         val uid = ownerId(principal)
@@ -54,7 +55,7 @@ class BikeComponentLifecycleController(
     fun restore(
         @PathVariable bikeId: Long,
         @PathVariable componentId: Long,
-        @AuthenticationPrincipal principal: UserDetails,
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @RequestBody(required = false) body: ChangeRequest?
     ): ResponseEntity<Void> {
         val uid = ownerId(principal)
@@ -72,7 +73,7 @@ class BikeComponentLifecycleController(
     fun hardDelete(
         @PathVariable bikeId: Long,
         @PathVariable componentId: Long,
-        @AuthenticationPrincipal principal: UserDetails,
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @RequestBody(required = false) body: ChangeRequest?
     ): ResponseEntity<Void> {
         val uid = ownerId(principal)

@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.web.bind.annotation.*
+import org.springframework.http.HttpStatus
+import org.springframework.web.server.ResponseStatusException
 
 data class BikeDto(
     val id: Long?,
@@ -36,7 +38,7 @@ class BikeController(
 ) {
     @GetMapping
     fun list(@Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails): List<BikeDto> {
-        val user = users.findByEmail(principal.username) ?: throw NoSuchElementException()
+        val user = users.findByEmail(principal.username) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Not found")
         return bikes.findAllByOwner(user).map { it.toDto() }
     }
 
@@ -45,7 +47,7 @@ class BikeController(
         @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @Valid @RequestBody body: BikeDto
     ): BikeDto {
-        val user = users.findByEmail(principal.username) ?: throw NoSuchElementException()
+        val user = users.findByEmail(principal.username) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Not found")
         val saved = bikes.save(
             Bike(
                 owner = user,
@@ -63,7 +65,7 @@ class BikeController(
         @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @PathVariable id: Long
     ): BikeDto {
-        val user = users.findByEmail(principal.username) ?: throw NoSuchElementException()
+        val user = users.findByEmail(principal.username) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Not found")
         val bike = bikes.findByIdAndOwnerId(id, user.id!!).orElseThrow { NoSuchElementException() }
         return bike.toDto()
     }
@@ -74,7 +76,7 @@ class BikeController(
         @PathVariable id: Long,
         @Valid @RequestBody body: UpdateBikeRequest
     ): BikeDto {
-        val user = users.findByEmail(principal.username) ?: throw NoSuchElementException()
+        val user = users.findByEmail(principal.username) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Not found")
         val bike = bikes.findByIdAndOwnerId(id, user.id!!).orElseThrow { NoSuchElementException() }
 
         bike.name = body.name
@@ -91,7 +93,7 @@ class BikeController(
         @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @PathVariable id: Long
     ): ResponseEntity<Void> {
-        val user = users.findByEmail(principal.username) ?: throw NoSuchElementException()
+        val user = users.findByEmail(principal.username) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Not found")
         val bike = bikes.findByIdAndOwnerId(id, user.id!!).orElseThrow { NoSuchElementException() }
 
         bikes.delete(bike)

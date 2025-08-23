@@ -7,6 +7,7 @@ import com.bikecare.bikecomponent.history.EventType
 import com.bikecare.user.AppUserRepository
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
+import io.swagger.v3.oas.annotations.Parameter
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.PositiveOrZero
@@ -88,7 +89,7 @@ class BikeComponentController(
     @GetMapping
     fun list(
         @PathVariable bikeId: Long,
-        @AuthenticationPrincipal principal: UserDetails,
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @RequestParam(defaultValue = "true") activeOnly: Boolean
     ): ResponseEntity<List<ComponentResponse>> {
         val uid = userId(principal)
@@ -102,7 +103,7 @@ class BikeComponentController(
     @PostMapping
     fun create(
         @PathVariable bikeId: Long,
-        @AuthenticationPrincipal principal: UserDetails,
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @Valid @RequestBody body: CreateComponentRequest
     ): ResponseEntity<ComponentResponse> {
         val uid = userId(principal)
@@ -146,7 +147,7 @@ class BikeComponentController(
     fun getOne(
         @PathVariable bikeId: Long,
         @PathVariable componentId: Long,
-        @AuthenticationPrincipal principal: UserDetails
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails
     ): ResponseEntity<ComponentResponse> {
         val uid = userId(principal)
         val comp = repo.findByIdAndBikeId(componentId, bikeId, uid)
@@ -159,7 +160,7 @@ class BikeComponentController(
     fun update(
         @PathVariable bikeId: Long,
         @PathVariable componentId: Long,
-        @AuthenticationPrincipal principal: UserDetails,
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
         @Valid @RequestBody body: CreateComponentRequest
     ): ResponseEntity<ComponentResponse> {
         val uid = userId(principal)
