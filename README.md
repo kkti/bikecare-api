@@ -33,3 +33,9 @@ Includes planned integration with external sports platforms (e.g. Strava API).
 ### Run locally
 ```bash
 ./gradlew bootRun
+## Run locally (Docker Postgres)
+
+**Prereqs:** JDK 21, Docker Desktop.
+
+```bash
+\```
