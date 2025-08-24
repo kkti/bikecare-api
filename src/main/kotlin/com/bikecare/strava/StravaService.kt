@@ -23,20 +23,34 @@ class StravaService(
     private val client = RestClient.create("https://www.strava.com")
 
     fun exchangeCode(code: String): StravaTokenResponse {
-        if (clientId.isBlank() || clientSecret.isBlank()) {
-            throw IllegalStateException("Missing STRAVA_CLIENT_ID/STRAVA_CLIENT_SECRET")
-        }
         val form = LinkedMultiValueMap<String, String>().apply {
-            add("client_id", clientId)
-            add("client_secret", clientSecret)
-            add("code", code)
-            add("grant_type", "authorization_code")
+            add("client_id", clientId); add("client_secret", clientSecret)
+            add("code", code); add("grant_type", "authorization_code")
         }
-        return client.post()
-            .uri("/oauth/token")
+        return client.post().uri("/oauth/token")
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-            .body(form)
-            .retrieve()
-            .body(StravaTokenResponse::class.java)!!
+            .body(form).retrieve().body(StravaTokenResponse::class.java)!!
+    }
+
+    fun refreshToken(refreshToken: String): StravaTokenResponse {
+        val form = LinkedMultiValueMap<String, String>().apply {
+            add("client_id", clientId); add("client_secret", clientSecret)
+            add("grant_type", "refresh_token"); add("refresh_token", refreshToken)
+        }
+        return client.post().uri("/oauth/token")
+            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+            .body(form).retrieve().body(StravaTokenResponse::class.java)!!
+    }
+
+    fun getAthlete(accessToken: String): Map<String, Any> {
+        return client.get().uri("/api/v3/athlete")
+            .header("Authorization", "Bearer $accessToken")
+            .retrieve().body(Map::class.java) as Map<String, Any>
+    }
+
+    fun deauthorize(accessToken: String) {
+        client.post().uri("/oauth/deauthorize")
+            .header("Authorization", "Bearer $accessToken")
+            .retrieve().toBodilessEntity()
     }
 }
