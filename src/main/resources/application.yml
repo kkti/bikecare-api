@@ -3,7 +3,7 @@ spring:
     import: optional:file:./config/application-local.yml
 
   datasource:
-    url: ${BC_DB_URL:jdbc:postgresql://localhost:5432/bikecare}
+    url: ${BC_DB_URL:jdbc:postgresql://localhost:5432/bikecaredb}
     username: ${BC_DB_USER:bikecare}
     password: ${BC_DB_PASS:bikecare}
     hikari:
@@ -15,56 +15,40 @@ spring:
       ddl-auto: validate
     properties:
       hibernate:
+        format_sql: true
         jdbc:
           time_zone: UTC
-        format_sql: true
 
   flyway:
     enabled: true
 
-server:
-  port: ${PORT:8080}
-
-security:
-  jwt:
-    secret: ${BC_JWT_SECRET:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
-    expiration: 86400000 # 24h
-
-cors:
-  allowed-origins: ${BC_CORS_ORIGINS:http://localhost:5173}
-
-springdoc:
-  api-docs:
-    enabled: true
-    groups:
-      enabled: true
-    path: /v3/api-docs
-  swagger-ui:
-    path: /swagger-ui/index.html
-    display-request-duration: true
-    urls:
-      - name: bikecare
-        url: /v3/api-docs/bikecare
-    urls-primary-name: bikecare
-
-logging:
-  level:
-    org.springframework.security: INFO
-    org.hibernate.SQL: INFO
-    # org.hibernate.type.descriptor.sql.BasicBinder: TRACE  # odkomentuj pro bind parametry
-    # org.springdoc: DEBUG                                 # odkomentuj pro ladění springdocu
+  cache:
+    type: caffeine
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,caches
+        include: health,info
   endpoint:
     health:
-      show-details: always
+      show-details: when_authorized
 
-# Strava OAuth
+security:
+  jwt:
+    secret: ${BC_JWT_SECRET:change-me-please-change-me-please-32b-min}
+    expiration: ${BC_JWT_EXPIRATION:43200000}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
 strava:
   client-id: ${STRAVA_CLIENT_ID:}
   client-secret: ${STRAVA_CLIENT_SECRET:}
   redirect-uri: ${STRAVA_REDIRECT_URI:http://localhost:8080/api/strava/oauth/callback}
+
+# defaultní prahy pro výpočet opotřebení komponent
+bikecare:
+  health:
+    warnAt: 75
+    criticalAt: 95

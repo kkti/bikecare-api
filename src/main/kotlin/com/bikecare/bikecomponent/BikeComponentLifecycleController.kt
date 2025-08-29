@@ -27,6 +27,19 @@ class BikeComponentLifecycleController(
         val odometerKm: BigDecimal? = null,
     )
 
+    data class ReplaceRequest(
+        val at: Instant? = null,
+        val odometerKm: BigDecimal? = null,
+        val label: String? = null,
+        val price: BigDecimal? = null,
+        val currency: String? = null,
+        val lifespanOverride: BigDecimal? = null,
+        val shop: String? = null,
+        val receiptPhotoUrl: String? = null
+    )
+
+    data class ReplaceResponse(val newComponentId: Long)
+
     private fun ownerId(principal: UserDetails): Long =
         users.findByEmail(principal.username)?.id
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "User not found")
@@ -84,5 +97,31 @@ class BikeComponentLifecycleController(
             at = body?.at ?: Instant.now()
         )
         return ResponseEntity.noContent().build()
+    }
+
+    @Operation(summary = "Replace component (close old → create new of the same type)")
+    @PostMapping("/replace")
+    fun replace(
+        @PathVariable bikeId: Long,
+        @PathVariable componentId: Long,
+        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
+        @Valid @RequestBody(required = false) body: ReplaceRequest?
+    ): ResponseEntity<ReplaceResponse> {
+        val uid = ownerId(principal)
+        val at = body?.at ?: Instant.now()
+        val newComp = service.replace(
+            bikeId = bikeId,
+            componentId = componentId,
+            ownerId = uid,
+            at = at,
+            odometerKm = body?.odometerKm,
+            newLabel = body?.label,
+            newPrice = body?.price,
+            newCurrency = body?.currency,
+            newLifespanOverride = body?.lifespanOverride,
+            newShop = body?.shop,
+            newReceiptPhotoUrl = body?.receiptPhotoUrl
+        )
+        return ResponseEntity.status(HttpStatus.CREATED).body(ReplaceResponse(newComp.id!!))
     }
 }

@@ -1,21 +1,22 @@
 spring:
-  application:
-    name: bikecare
+  datasource:
+    url: jdbc:h2:mem:bikecare;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
   jpa:
     hibernate:
-      ddl-auto: validate
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.H2Dialect
+    properties:
+      hibernate:
+        format_sql: true
+        globally_quoted_identifiers: true
+  h2:
+    console:
+      enabled: false
 
-# tiché logy ve spring-security během testů
-logging:
-  level:
-    org.springframework.security: WARN
-
-# JWT – pro testy musí existovat platný klíč
 security:
   jwt:
-    # base64 (dekóduje se na 48+ bytů; bezpečné jen pro testy)
-    secret: "ZmFrZV9iYXNlNjRfand0X3NlY3JldF9rZXlfdGVzdF9vbmx5X2Zvcl9kZXY="
-    expiration: 3600000
+    secret: 74111c60cc14ab63d75c7ce8c6aee34ec21f1f012f1388acef999df84c5f8a8f
+    expiration: 43200000

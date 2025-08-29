@@ -3,24 +3,28 @@ package com.bikecare.bikecomponent.history
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import org.springframework.stereotype.Repository
+import org.springframework.transaction.annotation.Transactional
 
+@Repository
 interface ComponentEventRepository : JpaRepository<ComponentEvent, Long> {
 
-    fun deleteByComponentIdAndUserId(componentId: Long, userId: Long): Long
+    @Transactional
+    fun deleteByComponentId(componentId: Long): Long
 
     @Query(
         """
         select e
         from ComponentEvent e
-        where e.componentId = :componentId
-          and e.bikeId = :bikeId
-          and e.userId = :userId
-        order by e.atTime desc
+        where e.bikeId = :bikeId
+          and e.componentId = :componentId
+          and e.userId = :ownerId
+        order by e.atTime asc
         """
     )
     fun findHistoryOwned(
-        @Param("componentId") componentId: Long,
         @Param("bikeId") bikeId: Long,
-        @Param("userId") userId: Long
+        @Param("componentId") componentId: Long,
+        @Param("ownerId") ownerId: Long
     ): List<ComponentEvent>
 }
