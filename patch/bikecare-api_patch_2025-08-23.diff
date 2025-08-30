@@ -1,0 +1,176 @@
+--- a/src/main/kotlin/com/bikecare/bikecomponent/BikeComponentController.kt
++++ b/src/main/kotlin/com/bikecare/bikecomponent/BikeComponentController.kt
+@@ -7,6 +7,7 @@
+ import com.bikecare.user.AppUserRepository
+ import io.swagger.v3.oas.annotations.Operation
+ import io.swagger.v3.oas.annotations.tags.Tag
++import io.swagger.v3.oas.annotations.Parameter
+ import jakarta.validation.Valid
+ import jakarta.validation.constraints.NotBlank
+ import jakarta.validation.constraints.PositiveOrZero
+@@ -88,7 +89,7 @@
+     @GetMapping
+     fun list(
+         @PathVariable bikeId: Long,
+-        @AuthenticationPrincipal principal: UserDetails,
++        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
+         @RequestParam(defaultValue = "true") activeOnly: Boolean
+     ): ResponseEntity<List<ComponentResponse>> {
+         val uid = userId(principal)
+@@ -102,7 +103,7 @@
+     @PostMapping
+     fun create(
+         @PathVariable bikeId: Long,
+-        @AuthenticationPrincipal principal: UserDetails,
++        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
+         @Valid @RequestBody body: CreateComponentRequest
+     ): ResponseEntity<ComponentResponse> {
+         val uid = userId(principal)
+@@ -146,7 +147,7 @@
+     fun getOne(
+         @PathVariable bikeId: Long,
+         @PathVariable componentId: Long,
+-        @AuthenticationPrincipal principal: UserDetails
++        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails
+     ): ResponseEntity<ComponentResponse> {
+         val uid = userId(principal)
+         val comp = repo.findByIdAndBikeId(componentId, bikeId, uid)
+@@ -159,7 +160,7 @@
+     fun update(
+         @PathVariable bikeId: Long,
+         @PathVariable componentId: Long,
+-        @AuthenticationPrincipal principal: UserDetails,
++        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
+         @Valid @RequestBody body: CreateComponentRequest
+     ): ResponseEntity<ComponentResponse> {
+         val uid = userId(principal)
+--- a/src/main/kotlin/com/bikecare/bikecomponent/BikeComponentLifecycleController.kt
++++ b/src/main/kotlin/com/bikecare/bikecomponent/BikeComponentLifecycleController.kt
+@@ -3,6 +3,7 @@
+ import com.bikecare.user.AppUserRepository
+ import io.swagger.v3.oas.annotations.Operation
+ import io.swagger.v3.oas.annotations.tags.Tag
++import io.swagger.v3.oas.annotations.Parameter
+ import jakarta.validation.Valid
+ import org.springframework.http.HttpStatus
+ import org.springframework.http.ResponseEntity
+@@ -35,7 +36,7 @@
+     fun softDelete(
+         @PathVariable bikeId: Long,
+         @PathVariable componentId: Long,
+-        @AuthenticationPrincipal principal: UserDetails,
++        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
+         @RequestBody(required = false) body: ChangeRequest?
+     ): ResponseEntity<Void> {
+         val uid = ownerId(principal)
+@@ -54,7 +55,7 @@
+     fun restore(
+         @PathVariable bikeId: Long,
+         @PathVariable componentId: Long,
+-        @AuthenticationPrincipal principal: UserDetails,
++        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
+         @RequestBody(required = false) body: ChangeRequest?
+     ): ResponseEntity<Void> {
+         val uid = ownerId(principal)
+@@ -72,7 +73,7 @@
+     fun hardDelete(
+         @PathVariable bikeId: Long,
+         @PathVariable componentId: Long,
+-        @AuthenticationPrincipal principal: UserDetails,
++        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
+         @RequestBody(required = false) body: ChangeRequest?
+     ): ResponseEntity<Void> {
+         val uid = ownerId(principal)
+--- a/src/main/kotlin/com/bikecare/odometer/OdometerController.kt
++++ b/src/main/kotlin/com/bikecare/odometer/OdometerController.kt
+@@ -4,6 +4,7 @@
+ import com.bikecare.user.AppUserRepository
+ import io.swagger.v3.oas.annotations.Operation
+ import io.swagger.v3.oas.annotations.tags.Tag
++import io.swagger.v3.oas.annotations.Parameter
+ import jakarta.validation.Valid
+ import jakarta.validation.constraints.NotNull
+ import jakarta.validation.constraints.PositiveOrZero
+@@ -43,7 +44,7 @@
+     @PutMapping
+     fun upsert(
+         @PathVariable bikeId: Long,
+-        @AuthenticationPrincipal principal: UserDetails,
++        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
+         @Valid @RequestBody body: UpsertRequest
+     ): ResponseEntity<OdometerEntry> {
+         val user = users.findByEmail(principal.username)
+@@ -72,7 +73,7 @@
+     @GetMapping("/current")
+     fun current(
+         @PathVariable bikeId: Long,
+-        @AuthenticationPrincipal principal: UserDetails
++        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails
+     ): ResponseEntity<Map<String, Any>> {
+         val user = users.findByEmail(principal.username)
+             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "User not found")
+@@ -92,7 +93,7 @@
+     @DeleteMapping
+     fun deleteByDate(
+         @PathVariable bikeId: Long,
+-        @AuthenticationPrincipal principal: UserDetails,
++        @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
+         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) date: LocalDate
+     ): ResponseEntity<Void> {
+         val user = users.findByEmail(principal.username)
+--- a/src/main/kotlin/com/bikecare/bike/BikeController.kt
++++ b/src/main/kotlin/com/bikecare/bike/BikeController.kt
+@@ -9,6 +9,8 @@
+ import org.springframework.security.core.annotation.AuthenticationPrincipal
+ import org.springframework.security.core.userdetails.UserDetails
+ import org.springframework.web.bind.annotation.*
++import org.springframework.http.HttpStatus
++import org.springframework.web.server.ResponseStatusException
+ 
+ data class BikeDto(
+     val id: Long?,
+@@ -36,7 +38,7 @@
+ ) {
+     @GetMapping
+     fun list(@Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails): List<BikeDto> {
+-        val user = users.findByEmail(principal.username) ?: throw NoSuchElementException()
++        val user = users.findByEmail(principal.username) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Not found")
+         return bikes.findAllByOwner(user).map { it.toDto() }
+     }
+ 
+@@ -45,7 +47,7 @@
+         @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
+         @Valid @RequestBody body: BikeDto
+     ): BikeDto {
+-        val user = users.findByEmail(principal.username) ?: throw NoSuchElementException()
++        val user = users.findByEmail(principal.username) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Not found")
+         val saved = bikes.save(
+             Bike(
+                 owner = user,
+@@ -63,7 +65,7 @@
+         @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
+         @PathVariable id: Long
+     ): BikeDto {
+-        val user = users.findByEmail(principal.username) ?: throw NoSuchElementException()
++        val user = users.findByEmail(principal.username) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Not found")
+         val bike = bikes.findByIdAndOwnerId(id, user.id!!).orElseThrow { NoSuchElementException() }
+         return bike.toDto()
+     }
+@@ -74,7 +76,7 @@
+         @PathVariable id: Long,
+         @Valid @RequestBody body: UpdateBikeRequest
+     ): BikeDto {
+-        val user = users.findByEmail(principal.username) ?: throw NoSuchElementException()
++        val user = users.findByEmail(principal.username) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Not found")
+         val bike = bikes.findByIdAndOwnerId(id, user.id!!).orElseThrow { NoSuchElementException() }
+ 
+         bike.name = body.name
+@@ -91,7 +93,7 @@
+         @Parameter(hidden = true) @AuthenticationPrincipal principal: UserDetails,
+         @PathVariable id: Long
+     ): ResponseEntity<Void> {
+-        val user = users.findByEmail(principal.username) ?: throw NoSuchElementException()
++        val user = users.findByEmail(principal.username) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Not found")
+         val bike = bikes.findByIdAndOwnerId(id, user.id!!).orElseThrow { NoSuchElementException() }
+ 
+         bikes.delete(bike)
