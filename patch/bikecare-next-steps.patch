@@ -1,0 +1,175 @@
+--- a/src/main/kotlin/com/bikecare/bikecomponent/BikeComponentController.kt
++++ b/src/main/kotlin/com/bikecare/bikecomponent/BikeComponentController.kt
+@@ -5,6 +5,8 @@
+ import com.bikecare.bikecomponent.history.ComponentEventRepository
+ import com.bikecare.bikecomponent.history.EventType
+ import com.bikecare.user.AppUserRepository
++import com.bikecare.odometer.OdometerEntryRepository
++import com.bikecare.componenttype.ComponentTypeRepository
+ import io.swagger.v3.oas.annotations.Operation
+ import io.swagger.v3.oas.annotations.tags.Tag
+ import jakarta.validation.Valid
+@@ -26,7 +28,9 @@
+     private val bikes: BikeRepository,
+     private val users: AppUserRepository,
+     private val repo: BikeComponentRepository,
+-    private val events: ComponentEventRepository
++    private val events: ComponentEventRepository,
++    private val types: ComponentTypeRepository,
++    private val odometer: OdometerEntryRepository
+ ) {
+ 
+     data class CreateComponentRequest(
+@@ -56,7 +60,13 @@
+         val currency: String?,
+         val shop: String?,
+         val receiptPhotoUrl: String?,
+-        val removedAt: Instant?
++        val removedAt: Instant?,
++
++        // --- computed (nullable if cannot be derived) ---
++        val usedKm: BigDecimal?,
++        val remainingKm: BigDecimal?,
++        val percentUsed: BigDecimal?,
++        val dueReplacement: Boolean?
+     )
+ 
+     private fun userId(principal: UserDetails) =
+@@ -68,7 +78,50 @@
+         if (!exists) throw ResponseStatusException(HttpStatus.NOT_FOUND, "Bike not found")
+     }
+ 
+-    private fun toDto(c: BikeComponent) = ComponentResponse(
++    private fun toDto(c: BikeComponent): ComponentResponse {
++        // resolve lifespan preference: override -> default from catalog
++        val defaultLifespan = types.findByKey(c.typeKey)?.defaultLifespan
++        val lifespan = c.lifespanOverride ?: defaultLifespan
++
++        // latest odometer for the bike
++        val lastOdo = odometer.findTopByBike_IdOrderByAtDateDesc(c.bike.id!!)?.km
++
++        val usedKm = if (lastOdo != null && c.installedOdometerKm != null)
++            lastOdo.subtract(c.installedOdometerKm)
++        else null
++
++        val remainingKm = if (lifespan != null && usedKm != null)
++            lifespan.subtract(usedKm)
++        else null
++
++        val percentUsed = if (lifespan != null && usedKm != null && lifespan.compareTo(java.math.BigDecimal.ZERO) > 0)
++            usedKm.divide(lifespan, 2, java.math.RoundingMode.HALF_UP).multiply(java.math.BigDecimal(100))
++        else null
++
++        val dueReplacement = if (remainingKm != null)
++            (remainingKm.signum() <= 0)
++        else null
++
++        return ComponentResponse(
++            id = c.id!!,
++            typeKey = c.typeKey,
++            typeName = c.typeName,
++            label = c.label,
++            position = c.position,
++            installedAt = c.installedAt,
++            installedOdometerKm = c.installedOdometerKm,
++            lifespanOverride = c.lifespanOverride,
++            price = c.price,
++            currency = c.currency,
++            shop = c.shop,
++            receiptPhotoUrl = c.receiptPhotoUrl,
++            removedAt = c.removedAt,
++            usedKm = usedKm,
++            remainingKm = remainingKm,
++            percentUsed = percentUsed,
++            dueReplacement = dueReplacement
++        )
++    }
+         id = c.id!!,
+         typeKey = c.typeKey,
+         typeName = c.typeName,
+@@ -181,4 +234,4 @@
+         val saved = repo.save(comp)
+         return ResponseEntity.ok(toDto(saved))
+     }
+-}
++}
+--- a/src/main/resources/db/migration/V11__fix_component_event_fk_and_triggers.sql
++++ b/src/main/resources/db/migration/V11__fix_component_event_fk_and_triggers.sql
+@@ -0,0 +1,56 @@
++
++-- V10__fix_component_event_fk_and_triggers.sql
++-- Align component_event FKs to table 'bike_components' and drop legacy triggers to avoid double-logging.
++
++-- 1) Drop legacy triggers if they exist (names from V6)
++DO $$
++BEGIN
++  IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_bc_after_insert') THEN
++    EXECUTE 'DROP TRIGGER trg_bc_after_insert ON bike_component';
++  END IF;
++  IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_bc_after_update') THEN
++    EXECUTE 'DROP TRIGGER trg_bc_after_update ON bike_component';
++  END IF;
++END $$;
++
++-- 2) If legacy table exists, normalize name to bike_components (keeping data)
++DO $$
++BEGIN
++  IF to_regclass('public.bike_component') IS NOT NULL
++     AND to_regclass('public.bike_components') IS NULL THEN
++    EXECUTE 'ALTER TABLE bike_component RENAME TO bike_components';
++  END IF;
++END $$;
++
++-- 3) Ensure FKs in component_event point to the right tables
++DO $$
++BEGIN
++  -- Drop wrong FK if present
++  IF EXISTS (
++      SELECT 1 FROM pg_constraint
++      WHERE conname = 'component_event_component_id_fkey'
++        AND conrelid = 'component_event'::regclass
++  ) THEN
++    EXECUTE 'ALTER TABLE component_event DROP CONSTRAINT component_event_component_id_fkey';
++  END IF;
++
++  -- Create FK to bike_components(id)
++  IF to_regclass('public.bike_components') IS NOT NULL THEN
++    EXECUTE 'ALTER TABLE component_event ADD CONSTRAINT component_event_component_id_fkey
++             FOREIGN KEY (component_id) REFERENCES bike_components(id) ON DELETE CASCADE';
++  END IF;
++
++  -- Bike FK (to bike)
++  IF NOT EXISTS (
++      SELECT 1 FROM pg_constraint
++      WHERE conname = 'component_event_bike_id_fkey'
++        AND conrelid = 'component_event'::regclass
++  ) THEN
++    EXECUTE 'ALTER TABLE component_event ADD CONSTRAINT component_event_bike_id_fkey
++             FOREIGN KEY (bike_id) REFERENCES bike(id) ON DELETE CASCADE';
++  END IF;
++END $$;
++
++-- 4) Helpful indexes (idempotent)
++CREATE INDEX IF NOT EXISTS idx_component_event_component_time ON component_event(component_id, at_time DESC);
++CREATE INDEX IF NOT EXISTS idx_component_event_bike_time ON component_event(bike_id, at_time DESC);
+
+--- a/src/main/kotlin/com/bikecare/odometer/OdometerController.kt
++++ b/src/main/kotlin/com/bikecare/odometer/OdometerController.kt
+@@ -101,4 +101,17 @@
+         odoRepo.deleteByBike_IdAndAtDate(bikeId, date)
+         return ResponseEntity.noContent().build()
+     }
++    @Operation(summary = "Get latest odometer entry (date + km)")
++    @GetMapping("/current")
++    fun current(
++        @PathVariable bikeId: Long,
++        @AuthenticationPrincipal principal: UserDetails
++    ): ResponseEntity<CurrentResponse> {
++        val user = users.findByEmail(principal.username)
++            ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "User not found")
++        requireOwnedBike(bikeId, user.id!!)
++        val last = odoRepo.findTopByBike_IdOrderByAtDateDesc(bikeId)
++        return ResponseEntity.ok(CurrentResponse(last?.atDate, last?.km))
++    }
++
+ }

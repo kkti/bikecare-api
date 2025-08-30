@@ -1,12 +1,9 @@
-# config/application-local.yml
 spring:
+  flyway:
+    enabled: true
   datasource:
-    url: jdbc:postgresql://localhost:5432/bikecare
-    username: bikecare
-    password: bikecare
-
-jwt:
-  # dlouhý klíč ≥ 32 bajtů (níže je 64 hex znaků = 32 bajtů)
-  secret: 74111c60cc14ab63d75c7ce8c6aee34ec21f1f012f1388acef999df84c5f8a8f
-  issuer: bikecare
-  ttlMinutes: 1440
+    url: jdbc:postgresql://localhost:5432/bikecaredb
+    username: ${BC_DB_USER:bikecare}
+    password: ${BC_DB_PASS:bikecare}
+    hikari:
+      maximum-pool-size: 5

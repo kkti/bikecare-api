@@ -1,15 +1,21 @@
-version: "3.9"
+# (odstraň řádek `version: ...`)
+
 services:
   postgres:
-    image: postgres:15
-    container_name: bikecare-postgres
-    environment:
-      POSTGRES_USER: bikecare
-      POSTGRES_PASSWORD: bikecare
-      POSTGRES_DB: bikecare
+    image: postgres:16-alpine   # ⬅️ bylo 15.x
     ports:
       - "5432:5432"
+    environment:
+      POSTGRES_DB: bikecaredb
+      POSTGRES_USER: bikecare
+      POSTGRES_PASSWORD: bikecare
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bikecare -d bikecaredb"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   pgdata:

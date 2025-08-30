@@ -3,7 +3,7 @@ spring:
     import: optional:file:./config/application-local.yml
 
   datasource:
-    url: ${BC_DB_URL:jdbc:postgresql://localhost:5432/bikecare}
+    url: ${BC_DB_URL:jdbc:postgresql://localhost:5432/bikecaredb}
     username: ${BC_DB_USER:bikecare}
     password: ${BC_DB_PASS:bikecare}
     hikari:
@@ -21,6 +21,8 @@ spring:
 
   flyway:
     enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
 
 server:
   port: ${PORT:8080}
